@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+#====================HEADER==========================================|
+#AUTHOR
+#  Jefferson Rocha
+#
+#Descrição
+#  Programa de sincronização das minhas máquinas para meu
+#  servidor local, utilize as variáveis para alterar conforme
+#  a sua necessidade
+#  Se deseja adicione no cron para fazer isto 1 ou talvez 2 vezes ao
+#  dia. Isto deve ser suficiente para ficar tudo sincronizado.
+#====================================================================|
+
+#===============CONFIGURAÇÃO
+user='slackjeff'                # Usuario do servidor
+server='192.168.0.26'           # Ip do Servidor, não use alias
+port='2606'                     # Porta do Servidor
+log='/tmp/backup-rsync.log'     # Local para log
+
+# Se deseja ativar o envio de logs ao final
+# do rsync deixe com 1, caso deseje desligar
+# preencha com 0
+log_key='1'
+#==========================
+
+
+#============Testes
+# Sem conectividade, servidor off.
+ping -c 2 "$server" &>/dev/null || exit
+
+
+#============ATENÇÃO
+# Em ambas arrays utilize o diretório completo
+# para não ter futuros problemas. Utilize tambem
+# o número do indice na frente do caminho, ex:
+# [10]='/tmp/arquivostemp' para um visualização
+# melhor Origem ----> Destino
+
+# Diretórios de origem/Máquina Local.
+home='/home/slackjeff' # Seu home
+list_arch=(
+   [0]='/tmp/*_SBo.t?z'
+   [1]="${home}/cartao/"
+   [2]="${home}/scripts/"
+   [3]="${home}/public_html/"
+)
+# Diretórios de Destino/Servidor
+home_server='/home/media'
+list_dir=(
+   [0]="${home_server}/pacotes_slackbuilds/"
+   [1]="${home_server}/documentos/"
+   [2]="${home_server}/scripts/"
+   [3]="${home_server}/site_slackjeff/"
+)
+
+i='0' # Incremento
+until [[ $i -ge "${#list_arch[@]}" ]]; do
+   rsync -avhz -e "ssh -p ${port}" \
+   ${list_arch[$i]} ${user}@${server}:${list_dir[$i]} || exit 1
+   let i++
+done
+
+# Enviando log para /var/log/
+# necessida de root para ter sucesso.
+if [ $log_key -eq '1' ]; then
+   cat >> "$log" <<EOF
+Log realizado em: $(date "+%d/%h/%y %H:%M")
++++++++++++++++++++++++++++++++++++++++
+
+EOF
+fi
+
+exit 0
